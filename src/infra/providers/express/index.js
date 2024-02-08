@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const helmet = require('helmet');
 const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
@@ -11,19 +12,21 @@ const config = require('../../../config/config');
 const morgan = require('../../../config/morgan');
 const { jwtStrategy } = require('../../../config/passport');
 
-const { authLimiter } = require('../../../middlewares/rateLimiter');
-const { errorConverter, errorHandler } = require('../../../middlewares/error');
+const { authLimiter } = require('../../middlewares/rateLimiter');
+const { errorConverter, errorHandler } = require('../../middlewares/error');
 
-const ApiError = require('../../../utils/ApiError');
+const { ApiError } = require('../../../utils');
 
 const routes = require('../../routes/v1');
 
-const app = express();
+const initializeSocket = require('../socketIO');
 
-if (config.env !== 'test') {
-    app.use(morgan.successHandler);
-    app.use(morgan.errorHandler);
-}
+const app = express();
+const httpServer = http.createServer(app);
+initializeSocket(httpServer);
+
+app.use(morgan.successHandler);
+app.use(morgan.errorHandler);
 
 // set security HTTP headers
 app.use(helmet());
@@ -42,7 +45,18 @@ app.use(mongoSanitize());
 app.use(compression());
 
 // enable cors
-app.use(cors());
+const corsOptions = {
+    origin: ['http://localhost:3000', 'http://192.168.1.2:3000'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'Access-Control-Allow-Credentials',
+    ],
+};
+
+app.use(cors(corsOptions));
 app.options('*', cors());
 
 // jwt authentication
@@ -59,7 +73,7 @@ app.use('/v1', routes);
 
 // send back a 404 error for any unknown api request
 app.use((req, res, next) => {
-    next(new ApiError(httpStatus.NOT_FOUND, 'Not found'));
+    next(new ApiError(httpStatus.NOT_FOUND, 'Route not found'));
 });
 
 // convert error to ApiError, if needed
@@ -68,4 +82,4 @@ app.use(errorConverter);
 // handle error
 app.use(errorHandler);
 
-module.exports = app;
+module.exports = httpServer;

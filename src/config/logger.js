@@ -22,6 +22,7 @@ const logger = winston.createLogger({
         new winston.transports.Console({
             stderrLevels: ['error'],
         }),
+        new winston.transports.Console(),
     ],
 });
 

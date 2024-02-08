@@ -12,6 +12,11 @@ const userSchema = mongoose.Schema(
             required: true,
             trim: true,
         },
+        avatar: {
+            type: String,
+            default: '',
+            trim: true,
+        },
         email: {
             type: String,
             required: true,
@@ -19,9 +24,7 @@ const userSchema = mongoose.Schema(
             trim: true,
             lowercase: true,
             validate(value) {
-                if (!validator.isEmail(value)) {
-                    throw new Error('Invalid email');
-                }
+                if (!validator.isEmail(value)) throw new Error('Invalid email');
             },
         },
         password: {
@@ -30,11 +33,10 @@ const userSchema = mongoose.Schema(
             trim: true,
             minlength: 8,
             validate(value) {
-                if (!value.match(/\d/) || !value.match(/[a-zA-Z]/)) {
+                if (!value.match(/\d/) || !value.match(/[a-zA-Z]/))
                     throw new Error(
                         'Password must contain at least one letter and one number',
                     );
-                }
             },
             private: true, // used by the toJSON plugin
         },
@@ -43,9 +45,16 @@ const userSchema = mongoose.Schema(
             enum: roles,
             default: 'user',
         },
+        contacts: { type: [String], default: [] },
+        agents: { type: [String], default: [] },
         isEmailVerified: {
             type: Boolean,
             default: false,
+        },
+        plan: {
+            type: String,
+            default: 'Default',
+            trim: true,
         },
     },
     {
@@ -69,9 +78,9 @@ userSchema.methods.isPasswordMatch = async function (password) {
 
 userSchema.pre('save', async function (next) {
     const user = this;
-    if (user.isModified('password')) {
+    if (user.isModified('password'))
         user.password = await bcrypt.hash(user.password, 8);
-    }
+
     next();
 });
 
